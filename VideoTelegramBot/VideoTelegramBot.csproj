@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dd944035-11f3-4ece-8b69-faaf31e83129</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>.</DockerfileContext>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<None Update="ffmpeg">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Update="ffmpeg.exe">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <PackageReference Include="Telegram.Bot" Version="22.2.0" />
+	<PackageReference Include="Gress" Version="2.1.1" />
+	<PackageReference Include="Cogwheel" Version="2.1.0" />
+	<PackageReference Include="JsonExtensions" Version="1.2.0" />
+	<PackageReference Include="TagLibSharp" Version="2.3.0" />
+	<PackageReference Include="YoutubeExplode" Version="6.5.0" />
+	<PackageReference Include="YoutubeExplode.Converter" Version="6.5.0" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Reference Include="YoutubeDownloader.Core">
+      <HintPath>YoutubeDownloader.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Content Update="wwwroot\.dirholder">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
