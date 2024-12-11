@@ -9,8 +9,12 @@ public class WebServer
 
         app.MapGet("/{video}", (string video) =>
         {
-            var videoPath=Path.Combine(AppContext.BaseDirectory, "wwwroot", video);
-            return Results.Stream(new FileStream(videoPath, FileMode.Open), "video/mp4", video, enableRangeProcessing:true);
+            var videoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", video);
+
+            if (!File.Exists(videoPath))
+                return Results.NotFound();
+
+            return Results.Stream(new FileStream(videoPath, FileMode.Open), "video/mp4", video, enableRangeProcessing: true);
         });
 
         await app.RunAsync();
