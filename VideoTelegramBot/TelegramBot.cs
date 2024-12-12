@@ -5,13 +5,11 @@ namespace VideoTelegramBot;
 
 public class TelegramBot
 {
-    public async Task RunAsync(TimeSpan pollPeriod, CancellationToken cancellationToken)
+    public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         var offset = 0;
         var outputDirectory = "wwwroot";
         var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
-        var baseUrl = Environment.GetEnvironmentVariable("PUBLIC_URL")!;
-        var apiKey = Environment.GetEnvironmentVariable("API_KEY")!;
         var telegramBot = new TelegramBotClient(apiKey);
         var downloader = new Downloader();
 
@@ -65,7 +63,10 @@ public class TelegramBot
                             var filePaths = downloadTask.Result;
 
                             foreach (var path in filePaths)
-                                await telegramBot.SendMessage(update.Message.Chat, Path.Combine(baseUrl, path.Replace(outputPath, ".")).Replace('\\', '/'));
+                                await telegramBot.SendMessage(
+                                    update.Message.Chat, 
+                                    Path.Combine(baseUrl, path.Replace(outputPath, ".")).Replace('\\', '/'), 
+                                    replyParameters: new Telegram.Bot.Types.ReplyParameters() { MessageId=update.Message.MessageId});
                         }
                     }
                 }

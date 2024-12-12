@@ -2,12 +2,13 @@
 
 public class FileCollector
 {
-    public async Task RunAsync(string observeDirectory, TimeSpan fileLifeTime, TimeSpan pollPeriod, CancellationToken cancellationToken)
+    public async Task RunAsync(TimeSpan fileLifeTime, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
+        var observeDirectory = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(pollPeriod, cancellationToken);
-
 
             if (!Directory.Exists(observeDirectory))
                 continue;
