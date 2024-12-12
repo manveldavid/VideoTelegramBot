@@ -2,7 +2,7 @@
 
 public class WebServer
 {
-    public async Task RunAsync(string[] args)
+    public async Task RunAsync(string[] args, CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder(args);
         var app = builder.Build();
@@ -11,23 +11,23 @@ public class WebServer
         {
             var videoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", video);
 
-            try
-            {
-                if (!File.Exists(videoPath))
-                    return Results.NotFound();
+            if (!File.Exists(videoPath))
+                return Results.NotFound();
 
-                using(var stream = new FileStream(videoPath, FileMode.Open))
-                {
-                    return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
-                }
-            }
-            catch (Exception ex)
+            using (var stream = new FileStream(videoPath, FileMode.Open))
             {
-                Console.WriteLine(ex.ToString());
-                return Results.BadRequest();
+                return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
             }
         });
-
-        await app.RunAsync();
+    
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+                await app.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
     }
 }
