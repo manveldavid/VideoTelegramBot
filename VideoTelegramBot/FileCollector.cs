@@ -8,11 +8,26 @@ public class FileCollector
         {
             await Task.Delay(pollPeriod, cancellationToken);
 
-            if (Directory.Exists(observeDirectory))
+            if (!Directory.Exists(observeDirectory))
+                continue;
+
+            var expiredFiles = 
                 Directory.GetFiles(observeDirectory)
                     .Select(p => new FileInfo(p))
                     .Where(f => DateTime.UtcNow - f.CreationTimeUtc > fileLifeTime)
-                    .ToList().ForEach(f => File.Delete(f.FullName));
+                    .ToList();
+
+            foreach(var file in expiredFiles)
+            {
+                try
+                {
+                    File.Delete(file.FullName);
+                }
+                catch
+                {
+                    //some files can be used
+                }
+            }
         }
     }
 }
