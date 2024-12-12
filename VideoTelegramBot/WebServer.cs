@@ -11,10 +11,21 @@ public class WebServer
         {
             var videoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", video);
 
-            if (!File.Exists(videoPath))
-                return Results.NotFound();
+            try
+            {
+                if (!File.Exists(videoPath))
+                    return Results.NotFound();
 
-            return Results.Stream(new FileStream(videoPath, FileMode.Open), "video/mp4", video, enableRangeProcessing: true);
+                using(var stream = new FileStream(videoPath, FileMode.Open))
+                {
+                    return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return Results.BadRequest();
+            }
         });
 
         await app.RunAsync();

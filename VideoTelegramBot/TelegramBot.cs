@@ -21,23 +21,24 @@ public class TelegramBot
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(pollPeriod, cancellationToken);
-            var updates = await telegramBot.GetUpdates(offset);
 
-            if (!cancellationToken.IsCancellationRequested)
+            try
             {
-                foreach (var update in updates)
+                var updates = await telegramBot.GetUpdates(offset);
+
+                if (!cancellationToken.IsCancellationRequested)
                 {
-                    offset = update.Id + 1;
-
-                    if (update is null || update.Message is null)
-                        continue;
-
-                    if (update.Message.Type == MessageType.Text &&
-                        !string.IsNullOrEmpty(update.Message.Text) &&
-                        update.Message.Text != "/start" &&
-                        Uri.TryCreate(update.Message.Text, UriKind.Absolute, out var uri))
+                    foreach (var update in updates)
                     {
-                        try
+                        offset = update.Id + 1;
+
+                        if (update is null || update.Message is null)
+                            continue;
+
+                        if (update.Message.Type == MessageType.Text &&
+                            !string.IsNullOrEmpty(update.Message.Text) &&
+                            update.Message.Text != "/start" &&
+                            Uri.TryCreate(update.Message.Text, UriKind.Absolute, out var uri))
                         {
                             var resolveTask = downloader.ResolveUrl(uri);
 
@@ -66,13 +67,14 @@ public class TelegramBot
                             foreach (var path in filePaths)
                                 await telegramBot.SendMessage(update.Message.Chat, Path.Combine(baseUrl, path.Replace(outputPath, ".")).Replace('\\', '/'));
                         }
-                        catch (Exception ex)
-                        {
-                            await telegramBot.SendMessage(update.Message.Chat, ex.ToString());
-                        }
                     }
                 }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
         }
     }
 }
+
