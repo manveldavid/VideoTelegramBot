@@ -14,10 +14,7 @@ public class WebServer
             if (!File.Exists(videoPath))
                 return Results.NotFound();
 
-            using (var stream = new FileStream(videoPath, FileMode.Open))
-            {
-                return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
-            }
+            return Results.Stream(new FileStream(videoPath, FileMode.Open), "video/mp4", video, enableRangeProcessing: true);
         });
     
         try
