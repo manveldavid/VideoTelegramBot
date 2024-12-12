@@ -1,4 +1,6 @@
-﻿using Telegram.Bot;
+﻿using System;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace VideoTelegramBot;
@@ -8,73 +10,79 @@ public class TelegramBot
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         var offset = 0;
-        var outputDirectory = "wwwroot";
-        var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
         var telegramBot = new TelegramBotClient(apiKey);
-        var downloader = new Downloader();
-
-        if (!Directory.Exists(outputPath))
-            Directory.CreateDirectory(outputPath);
 
         while (!cancellationToken.IsCancellationRequested)
         {
             await Task.Delay(pollPeriod, cancellationToken);
 
-            try
+
+            var updates = await telegramBot.GetUpdates(offset);
+
+            if (!cancellationToken.IsCancellationRequested)
             {
-                var updates = await telegramBot.GetUpdates(offset);
-
-                if (!cancellationToken.IsCancellationRequested)
+                foreach (var update in updates)
                 {
-                    foreach (var update in updates)
-                    {
-                        offset = update.Id + 1;
+                    offset = update.Id + 1;
 
-                        if (update is null || update.Message is null)
-                            continue;
+                    if (update is null || update.Message is null)
+                        continue;
 
-                        if (update.Message.Type == MessageType.Text &&
-                            !string.IsNullOrEmpty(update.Message.Text) &&
-                            update.Message.Text != "/start" &&
-                            Uri.TryCreate(update.Message.Text, UriKind.Absolute, out var uri))
-                        {
-                            var resolveTask = downloader.ResolveUrl(uri);
-
-                            while (!resolveTask.IsCompleted)
-                            {
-                                await telegramBot.SendChatAction(update.Message.Chat, ChatAction.Typing);
-                                await Task.Delay(3000);
-                            }
-
-                            if (!resolveTask.Result.Any())
-                            {
-                                await telegramBot.SendMessage(update.Message.Chat, "Nothing found!");
-                                continue;
-                            }
-
-                            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, 10, outputPath);
-
-                            while (!downloadTask.IsCompleted)
-                            {
-                                await telegramBot.SendChatAction(update.Message.Chat, ChatAction.UploadVideo);
-                                await Task.Delay(3000);
-                            }
-
-                            var filePaths = downloadTask.Result;
-
-                            foreach (var path in filePaths)
-                                await telegramBot.SendMessage(
-                                    update.Message.Chat, 
-                                    Path.Combine(baseUrl, path.Replace(outputPath, ".")).Replace('\\', '/'), 
-                                    replyParameters: new Telegram.Bot.Types.ReplyParameters() { MessageId=update.Message.MessageId});
-                        }
-                    }
+                    if (update.Message.Type == MessageType.Text &&
+                        !string.IsNullOrEmpty(update.Message.Text) &&
+                        update.Message.Text != "/start" &&
+                        Uri.TryCreate(update.Message.Text, UriKind.Absolute, out var uri))
+                            DownloadVideoAndReturnLink(
+                                telegramBot,
+                                update.Message.Chat.Id,
+                                update.Message.MessageId,
+                                uri,
+                                baseUrl);
                 }
             }
-            catch(Exception ex)
+        }
+    }
+
+    private async Task DownloadVideoAndReturnLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix)
+    {
+        try
+        {
+            var outputDirectory = "wwwroot";
+            var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
+            var downloader = new Downloader();
+            var resolveTask = downloader.ResolveUrl(videoUrl);
+
+            while (!resolveTask.IsCompleted)
             {
-                Console.WriteLine(ex.ToString());
+                await telegramBot.SendChatAction(chatId, ChatAction.Typing);
+                await Task.Delay(3000);
             }
+
+            if (!resolveTask.Result.Any())
+            {
+                await telegramBot.SendMessage(chatId, "Nothing found!");
+                return;
+            }
+
+            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, 10, outputPath);
+
+            while (!downloadTask.IsCompleted)
+            {
+                await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
+                await Task.Delay(3000);
+            }
+
+            var filePaths = downloadTask.Result;
+
+            foreach (var path in filePaths)
+                await telegramBot.SendMessage(
+                    chatId,
+                    Path.Combine(baseUrlPrefix, path.Replace(outputPath, ".")).Replace('\\', '/'),
+                    replyParameters: new Telegram.Bot.Types.ReplyParameters() { MessageId = messageId });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
         }
     }
 }
