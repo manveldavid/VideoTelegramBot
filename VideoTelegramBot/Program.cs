@@ -25,7 +25,7 @@ namespace VideoTelegramBot
                     ),
 
                 new FileCollector().RunAsync(
-                    videoCollectorInpectPeriodInSeconds,
+                    videoLifeTimeInSeconds,
                     videoCollectorInpectPeriodInSeconds, 
                     CancellationToken.None
                     ),
