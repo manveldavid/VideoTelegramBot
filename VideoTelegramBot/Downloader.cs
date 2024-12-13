@@ -8,7 +8,7 @@ namespace VideoTelegramBot;
 
 public class Downloader
 {
-    public async Task<IEnumerable<IVideo>> ResolveUrl(Uri url)
+    public async Task<IEnumerable<IVideo>> ResolveUrl(Uri url, CancellationToken cancellationToken)
     {
         try
         {
@@ -16,14 +16,14 @@ public class Downloader
                 url.ToString().Split(
                     "\n",
                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-                ))).Videos;
+                ), cancellationToken:cancellationToken)).Videos;
         }
         catch
         {
             return Enumerable.Empty<IVideo>();
         }
     }
-    public async Task<string[]> DownloadVideosToOutputDirectory(IEnumerable<IVideo> videos, int maxVideoCount, string destinationDirectory)
+    public async Task<string[]> DownloadVideosToOutputDirectory(IEnumerable<IVideo> videos, int maxVideoCount, string destinationDirectory, CancellationToken cancellationToken)
     {
         var downloader = new VideoDownloader();
         var downloads = new List<string>();
@@ -37,7 +37,8 @@ public class Downloader
 
             download.VideoDownloadOption = await downloader.GetBestDownloadOptionAsync(
                     download.Video!.Id,
-                    download.VideoDownloadPreference
+                    download.VideoDownloadPreference,
+                    cancellationToken
                 );
 
             download.FilePath = Path.Combine(destinationDirectory, Guid.NewGuid().ToString() + '.' + download.VideoDownloadOption.Container.Name);
@@ -47,14 +48,16 @@ public class Downloader
                 download.FilePath!,
                 download.Video!,
                 download.VideoDownloadOption,
-                true
+                true,
+                cancellationToken: cancellationToken
             );
 
             try
             {
                 await new MediaTagInjector().InjectTagsAsync(
                     download.FilePath!,
-                    download.Video!
+                    download.Video!,
+                    cancellationToken
                 );
             }
             catch

@@ -1,5 +1,4 @@
-﻿using System;
-using Telegram.Bot;
+﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -9,6 +8,9 @@ public class TelegramBot
 {
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
+            return;
+
         var offset = 0;
         var telegramBot = new TelegramBotClient(apiKey);
 
@@ -16,8 +18,15 @@ public class TelegramBot
         {
             await Task.Delay(pollPeriod, cancellationToken);
 
-
-            var updates = await telegramBot.GetUpdates(offset);
+            Update[] updates = Array.Empty<Update>();
+            try
+            {
+                updates = await telegramBot.GetUpdates(offset, timeout:(int)pollPeriod.TotalSeconds, cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
 
             if (!cancellationToken.IsCancellationRequested)
             {
@@ -37,20 +46,21 @@ public class TelegramBot
                                 update.Message.Chat.Id,
                                 update.Message.MessageId,
                                 uri,
-                                baseUrl);
+                                baseUrl,
+                                cancellationToken);
                 }
             }
         }
     }
 
-    private async Task DownloadVideoAndReturnLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix)
+    private async Task DownloadVideoAndReturnLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, CancellationToken cancellationToken)
     {
         try
         {
             var outputDirectory = "wwwroot";
             var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
             var downloader = new Downloader();
-            var resolveTask = downloader.ResolveUrl(videoUrl);
+            var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
 
             while (!resolveTask.IsCompleted)
             {
@@ -64,7 +74,7 @@ public class TelegramBot
                 return;
             }
 
-            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, 10, outputPath);
+            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, 10, outputPath, cancellationToken);
 
             while (!downloadTask.IsCompleted)
             {

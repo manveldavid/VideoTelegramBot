@@ -2,7 +2,7 @@
 
 public class WebServer
 {
-    public async Task RunAsync(string[] args, CancellationToken cancellationToken)
+    public async Task RunAsync(string[] args, TimeSpan fileLifeTime, CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder(args);
         var app = builder.Build();
@@ -14,13 +14,18 @@ public class WebServer
             if (!File.Exists(videoPath))
                 return Results.NotFound();
 
-            return Results.Stream(new FileStream(videoPath, FileMode.Open), "video/mp4", video, enableRangeProcessing: true);
+            var stream = new FileStream(videoPath, FileMode.Open);
+            Task.Delay(fileLifeTime, cancellationToken).ContinueWith(res => stream.Dispose());
+
+            return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
         });
-    
+
+        app.MapGet("/isAlive", () => Results.Ok(true));
+
         try
         {
             while (!cancellationToken.IsCancellationRequested)
-                await app.RunAsync();
+                await app.RunAsync(cancellationToken);
         }
         catch (Exception ex)
         {

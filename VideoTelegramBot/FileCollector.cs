@@ -19,17 +19,20 @@ public class FileCollector
                     .Where(f => DateTime.UtcNow - f.CreationTimeUtc > fileLifeTime)
                     .ToList();
 
-            foreach (var file in expiredFiles)
+            await Task.Run(() =>
             {
-                try
+                foreach (var file in expiredFiles)
                 {
-                    File.Delete(file.FullName);
+                    try
+                    {
+                        File.Delete(file.FullName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-            }
+            }, cancellationToken);
         }
     }
 }

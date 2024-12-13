@@ -12,7 +12,8 @@ namespace VideoTelegramBot
 
             var tasks = new Task[] {
                 new WebServer().RunAsync(
-                    args, 
+                    args,
+                    videoLifeTimeInSeconds,
                     CancellationToken.None
                     ),
 
