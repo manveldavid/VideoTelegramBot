@@ -31,7 +31,7 @@ public class Downloader
         {
             var download = new Download()
             {
-                VideoDownloadPreference = new VideoDownloadPreference(Container.Mp4, VideoQualityPreference.Highest),
+                VideoDownloadPreference = new VideoDownloadPreference(Container.Mp4, VideoQualityPreference.UpTo480p),
                 Video = video
             };
 
