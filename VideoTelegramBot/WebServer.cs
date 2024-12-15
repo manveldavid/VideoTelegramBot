@@ -4,17 +4,6 @@ namespace VideoTelegramBot;
 
 public class WebServer
 {
-
-    public async Task<Stream> GetStream(string filePath)
-    {
-        using (var fs = new FileStream(filePath, FileMode.Open))
-        {
-            var ms = new MemoryStream();
-            await fs.CopyToAsync(ms);
-            return ms;
-        }
-    }
-
     public async Task RunAsync(string[] args, TimeSpan fileLifeTime, CancellationToken cancellationToken)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +16,7 @@ public class WebServer
             if (!File.Exists(videoPath))
                 return Results.NotFound();
 
-            var stream = await GetStream(videoPath);
+            var stream = new FileStream(videoPath, FileMode.Open);
             Task.Delay(fileLifeTime, cancellationToken).ContinueWith(res => stream.Dispose());
 
             return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
