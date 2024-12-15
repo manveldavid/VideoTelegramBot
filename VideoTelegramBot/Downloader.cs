@@ -38,6 +38,7 @@ public class Downloader
             download.VideoDownloadOption = await downloader.GetBestDownloadOptionAsync(
                     download.Video!.Id,
                     download.VideoDownloadPreference,
+                    false,
                     cancellationToken
                 );
 
