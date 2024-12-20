@@ -9,7 +9,7 @@ namespace VideoTelegramBot;
 public class TelegramBot
 {
     private const char _argsSpliter = ' ';
-    private CancellationTokenSource CancellationTokenSource { get; set; } = new();
+    private CancellationTokenSource DownloadingCancellationTokenSource { get; set; } = new();
     private Container[] Containers { get; } = 
         [
             Container.Mp3,
@@ -60,8 +60,9 @@ public class TelegramBot
 
                     if(update.Message.Text == "/stop")
                     {
-                        CancellationTokenSource.Cancel();
-                        CancellationTokenSource = new CancellationTokenSource();
+                        DownloadingCancellationTokenSource.Cancel();
+                        DownloadingCancellationTokenSource = new CancellationTokenSource();
+                        continue;
                     }
 
                     if (update.Message.Type != MessageType.Text ||
@@ -80,7 +81,7 @@ public class TelegramBot
                                 uri,
                                 baseUrl,
                                 args.Where(a => a != arg),
-                                CancellationTokenSource.Token);
+                                DownloadingCancellationTokenSource.Token);
                 }
             }
         }
@@ -96,12 +97,21 @@ public class TelegramBot
 
             var quality = VideoQualityPreference.UpTo720p;
             var container = Container.Mp4;
+            var startPlaylistIndex = 0;
+            var endPlaylistIndex = int.MaxValue;
 
             foreach (var arg in args) {
                 foreach(var option in Qualities)
                     quality = option.ToString().ToLower().Contains(arg.ToLower()) ? option : quality;
                 foreach(var option in Containers)
                     container = option.ToString().ToLower().Contains(arg.ToLower()) ? option : container;
+
+                if(arg.Contains('[') && arg.Contains(']'))
+                {
+                    var range = arg.Replace("[", string.Empty).Replace("]", string.Empty).Split('-');
+                    startPlaylistIndex = range.FirstOrDefault() is not null ? int.Parse(range.First()) : startPlaylistIndex;
+                    endPlaylistIndex = range.LastOrDefault() is not null ? int.Parse(range.Last()) : endPlaylistIndex;
+                }
             }
 
             var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
@@ -118,8 +128,9 @@ public class TelegramBot
                 return;
             }
 
+            var videos = resolveTask.Result.ToList();
 
-            foreach (var video in resolveTask.Result)
+            foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
                 {
                     var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
