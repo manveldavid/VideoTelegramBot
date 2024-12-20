@@ -26,9 +26,6 @@ public class TelegramBot
             VideoQualityPreference.UpTo1080p,
         ];
 
-    private bool Typing = false;
-    private bool Uploading = false;
-
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
@@ -103,13 +100,10 @@ public class TelegramBot
             var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
 
             while (!resolveTask.IsCompleted)
-                if (!Typing)
-                {
-                    Typing = true;
-                    await telegramBot.SendChatAction(chatId, ChatAction.Typing)
-                        .ContinueWith(res => Task.Delay(3000).ContinueWith(del => Typing = false));
-                }
-                else await Task.Delay(1000);
+            {
+                await telegramBot.SendChatAction(chatId, ChatAction.Typing);
+                await Task.Delay(3000);
+            }
 
             if (!resolveTask.Result.Any())
             {
@@ -119,33 +113,22 @@ public class TelegramBot
 
 
             foreach (var video in resolveTask.Result)
-                Task.Run(async () =>
                 {
-                    try
+                    var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+
+                    while (!downloadTask.IsCompleted)
                     {
-                        var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
-
-                        while (!downloadTask.IsCompleted)
-                            if (!Uploading)
-                            {
-                                Uploading = true;
-                                await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo)
-                                    .ContinueWith(res => Task.Delay(3000).ContinueWith(del => Uploading = false));
-                            }
-                            else await Task.Delay(1000);
-
-                        var filePath = downloadTask.Result;
-
-                        await telegramBot.SendMessage(
-                            chatId,
-                            $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
-                            replyParameters: new ReplyParameters() { MessageId = messageId });
+                        await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
+                        await Task.Delay(3000);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.ToString());
-                    }
-                });
+
+                var filePath = downloadTask.Result;
+
+                    await telegramBot.SendMessage(
+                        chatId,
+                        $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
+                        replyParameters: new ReplyParameters() { MessageId = messageId });
+                }
         }
         catch (Exception ex)
         {
