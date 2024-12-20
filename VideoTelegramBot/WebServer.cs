@@ -19,7 +19,11 @@ public class WebServer
             var stream = new FileStream(videoPath, FileMode.Open);
             Task.Delay(fileLifeTime, cancellationToken).ContinueWith(res => stream.Dispose());
 
-            return Results.Stream(stream, "video/mp4", video, enableRangeProcessing: true);
+            return Results.Stream(
+                stream: stream, 
+                contentType: "video/mp4", 
+                fileDownloadName: null, 
+                enableRangeProcessing: true);
         });
 
         app.MapGet("/isAlive", () => Results.Ok(true));
