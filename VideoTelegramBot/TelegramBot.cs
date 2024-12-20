@@ -63,6 +63,7 @@ public class TelegramBot
                     if(update.Message.Text == "/stop")
                     {
                         DownloadingCancellationTokenSource.Cancel();
+                        DownloadingCancellationTokenSource.Dispose();
                         DownloadingCancellationTokenSource = new CancellationTokenSource();
                         Console.WriteLine("all downloading stopped");
                         continue;
