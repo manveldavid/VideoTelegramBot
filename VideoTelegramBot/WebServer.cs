@@ -18,6 +18,7 @@ public class WebServer
 
             var stream = new FileStream(videoPath, FileMode.Open);
             Task.Delay(fileLifeTime, cancellationToken).ContinueWith(res => stream.Dispose());
+            Console.WriteLine($"stream {video}");
 
             return Results.Stream(
                 stream: stream, 

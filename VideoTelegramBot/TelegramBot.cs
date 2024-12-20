@@ -1,7 +1,9 @@
-﻿using Telegram.Bot;
+﻿using AngleSharp.Dom;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using YoutubeDownloader.Core.Downloading;
+using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
 
 namespace VideoTelegramBot;
@@ -24,7 +26,7 @@ public class TelegramBot
             VideoQualityPreference.UpTo360p,
             VideoQualityPreference.UpTo480p,
             VideoQualityPreference.UpTo720p, 
-            VideoQualityPreference.UpTo1080p,
+            VideoQualityPreference.UpTo1080p
         ];
 
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
@@ -62,6 +64,7 @@ public class TelegramBot
                     {
                         DownloadingCancellationTokenSource.Cancel();
                         DownloadingCancellationTokenSource = new CancellationTokenSource();
+                        Console.WriteLine("all downloading stopped");
                         continue;
                     }
 
@@ -109,8 +112,8 @@ public class TelegramBot
                 if(arg.Contains('[') && arg.Contains(']'))
                 {
                     var range = arg.Replace("[", string.Empty).Replace("]", string.Empty).Split('-');
-                    startPlaylistIndex = range.FirstOrDefault() is not null ? int.Parse(range.First()) : startPlaylistIndex;
-                    endPlaylistIndex = range.LastOrDefault() is not null ? int.Parse(range.Last()) : endPlaylistIndex;
+                    startPlaylistIndex = range.FirstOrDefault() is not null ? int.TryParse(range.Last(), out var parsedStartIndex) ? parsedStartIndex : startPlaylistIndex : startPlaylistIndex;
+                    endPlaylistIndex = range.LastOrDefault() is not null ? int.TryParse(range.Last(), out var parsedEndIndex) ? parsedEndIndex : endPlaylistIndex : endPlaylistIndex;
                 }
             }
 
@@ -125,28 +128,31 @@ public class TelegramBot
             if (!resolveTask.Result.Any())
             {
                 await telegramBot.SendMessage(chatId, "Nothing found!");
+                Console.WriteLine($"nothing found {videoUrl}");
                 return;
             }
 
             var videos = resolveTask.Result.ToList();
 
-            foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
-                {
-                    var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+            Console.WriteLine($"start downloading {videoUrl} ({container},{quality}){(resolveTask.Result.Count() > 1 ? $" [{startPlaylistIndex}-{endPlaylistIndex}]" : string.Empty)}");
 
-                    while (!downloadTask.IsCompleted)
-                    {
-                        await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
-                        await Task.Delay(3000);
-                    }
+            foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
+            {
+                var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+
+                while (!downloadTask.IsCompleted)
+                {
+                    await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
+                    await Task.Delay(3000);
+                }
 
                 var filePath = downloadTask.Result;
 
-                    await telegramBot.SendMessage(
-                        chatId,
-                        $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
-                        replyParameters: new ReplyParameters() { MessageId = messageId });
-                }
+                await telegramBot.SendMessage(
+                    chatId,
+                    $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
+                    replyParameters: new ReplyParameters() { MessageId = messageId });
+            }
         }
         catch (Exception ex)
         {

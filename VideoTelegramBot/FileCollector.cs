@@ -32,6 +32,7 @@ public class FileCollector
                         Console.WriteLine(ex.ToString());
                     }
                 }
+                Console.WriteLine($"{expiredFiles.Count} files removed");
             }, cancellationToken);
         }
     }
