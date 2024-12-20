@@ -155,6 +155,7 @@ public class TelegramBot
                     replyParameters: new ReplyParameters() { MessageId = messageId });
             }
         }
+        catch (AggregateException) { }
         catch (Exception ex)
         {
             Console.WriteLine(ex.ToString());
