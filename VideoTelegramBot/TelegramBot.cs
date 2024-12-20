@@ -8,7 +8,24 @@ namespace VideoTelegramBot;
 
 public class TelegramBot
 {
-    private char _argsSpliter = ' ';
+    private const char _argsSpliter = ' ';
+    private Container[] Containers { get; } = 
+        [
+            Container.Mp3,
+            Container.Mp4,
+            Container.Tgpp,
+            Container.WebM
+        ];
+    private VideoQualityPreference[] Qualities { get; } =
+        [
+            VideoQualityPreference.Lowest,
+            VideoQualityPreference.Highest,
+            VideoQualityPreference.UpTo360p,
+            VideoQualityPreference.UpTo480p,
+            VideoQualityPreference.UpTo720p, 
+            VideoQualityPreference.UpTo1080p,
+        ];
+
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
@@ -68,10 +85,10 @@ public class TelegramBot
             var quality = VideoQualityPreference.UpTo720p;
             var container = Container.Mp4;
             foreach (var arg in args) {
-                if(Enum.TryParse<VideoQualityPreference>(arg, true, out var qualityArg))
-                    quality = qualityArg;
-                if (Enum.TryParse<Container>(arg, true, out var containerArg))
-                    container = containerArg;
+                foreach(var option in Qualities)
+                    quality = option.ToString().ToLower().Contains(arg.ToLower()) ? option : quality;
+                foreach(var option in Containers)
+                    container = option.ToString().ToLower().Contains(arg.ToLower()) ? option : container;
             }
 
             var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
