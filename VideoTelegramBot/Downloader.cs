@@ -23,15 +23,16 @@ public class Downloader
             return Enumerable.Empty<IVideo>();
         }
     }
-    public async Task<string[]> DownloadVideosToOutputDirectory(IEnumerable<IVideo> videos, int maxVideoCount, string destinationDirectory, CancellationToken cancellationToken)
+    public async Task<string[]> DownloadVideosToOutputDirectory(IEnumerable<IVideo> videos, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
     {
         var downloader = new VideoDownloader();
-        var downloads = new List<string>();
+        var downloadTasks = new List<Task<string>>();
+
         foreach (var video in videos)
         {
             var download = new Download()
             {
-                VideoDownloadPreference = new VideoDownloadPreference(Container.Mp4, VideoQualityPreference.UpTo480p),
+                VideoDownloadPreference = new VideoDownloadPreference(container, quality),
                 Video = video
             };
 
@@ -45,7 +46,15 @@ public class Downloader
             download.FilePath = Path.Combine(destinationDirectory, Guid.NewGuid().ToString() + '.' + download.VideoDownloadOption.Container.Name);
             File.Create(download.FilePath).Close();
 
-            await downloader.DownloadVideoAsync(
+            downloadTasks.Add(DownloadVideo(downloader, download, cancellationToken));
+        }
+
+        return await Task.WhenAll(downloadTasks);
+    }
+
+    public static async Task<string> DownloadVideo(VideoDownloader downloader, Download download, CancellationToken cancellationToken)
+    {
+        await downloader.DownloadVideoAsync(
                 download.FilePath!,
                 download.Video!,
                 download.VideoDownloadOption,
@@ -53,22 +62,18 @@ public class Downloader
                 cancellationToken: cancellationToken
             );
 
-            try
-            {
-                await new MediaTagInjector().InjectTagsAsync(
-                    download.FilePath!,
-                    download.Video!,
-                    cancellationToken
-                );
-            }
-            catch
-            {
-                // Media tagging is not critical
-            }
-
-            downloads.Add(download.FilePath);
+        try
+        {
+            await new MediaTagInjector().InjectTagsAsync(
+                download.FilePath!,
+                download.Video!,
+                cancellationToken
+            );
         }
-
-        return downloads.ToArray();
+        catch
+        {
+            // Media tagging is not critical
+        }
+        return download.FilePath ?? string.Empty;
     }
 }

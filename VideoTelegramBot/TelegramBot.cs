@@ -1,11 +1,14 @@
 ﻿using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using YoutubeDownloader.Core.Downloading;
+using YoutubeExplode.Videos.Streams;
 
 namespace VideoTelegramBot;
 
 public class TelegramBot
 {
+    private char _argsSpliter = ' ';
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
@@ -40,26 +43,37 @@ public class TelegramBot
                     if (update.Message.Type == MessageType.Text &&
                         !string.IsNullOrEmpty(update.Message.Text) &&
                         update.Message.Text != "/start" &&
-                        Uri.TryCreate(update.Message.Text, UriKind.Absolute, out var uri))
-                            DownloadVideoAndReturnLink(
+                        Uri.TryCreate(update.Message.Text.Split(_argsSpliter).FirstOrDefault(), UriKind.Absolute, out var uri))
+                            DownloadVideoAndSendLink(
                                 telegramBot,
                                 update.Message.Chat.Id,
                                 update.Message.MessageId,
                                 uri,
                                 baseUrl,
+                                update.Message.Text.Split(_argsSpliter),
                                 cancellationToken);
                 }
             }
         }
     }
 
-    private async Task DownloadVideoAndReturnLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, CancellationToken cancellationToken)
+    private async Task DownloadVideoAndSendLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, string[] args, CancellationToken cancellationToken)
     {
         try
         {
             var outputDirectory = "wwwroot";
             var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
             var downloader = new Downloader();
+
+            var quality = VideoQualityPreference.UpTo720p;
+            var container = Container.Mp4;
+            foreach (var arg in args) {
+                if(Enum.TryParse<VideoQualityPreference>(arg, true, out var qualityArg))
+                    quality = qualityArg;
+                if (Enum.TryParse<Container>(arg, true, out var containerArg))
+                    container = containerArg;
+            }
+
             var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
 
             while (!resolveTask.IsCompleted)
@@ -74,7 +88,7 @@ public class TelegramBot
                 return;
             }
 
-            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, 10, outputPath, cancellationToken);
+            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, quality, container, outputPath, cancellationToken);
 
             while (!downloadTask.IsCompleted)
             {
