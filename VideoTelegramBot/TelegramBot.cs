@@ -114,20 +114,27 @@ public class TelegramBot
             foreach (var video in resolveTask.Result)
                 Task.Run(async () =>
                 {
-                    var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
-
-                    while (!downloadTask.IsCompleted)
+                    try
                     {
-                        await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
-                        await Task.Delay(3000);
+                        var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+
+                        while (!downloadTask.IsCompleted)
+                        {
+                            await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
+                            await Task.Delay(3000);
+                        }
+
+                        var filePath = downloadTask.Result;
+
+                        await telegramBot.SendMessage(
+                            chatId,
+                            $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
+                            replyParameters: new ReplyParameters() { MessageId = messageId });
                     }
-
-                    var filePath = downloadTask.Result;
-
-                    await telegramBot.SendMessage(
-                        chatId,
-                        $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
-                        replyParameters: new ReplyParameters() { MessageId = messageId });
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
                 });
         }
         catch (Exception ex)
