@@ -26,6 +26,9 @@ public class TelegramBot
             VideoQualityPreference.UpTo1080p,
         ];
 
+    private bool Typing = false;
+    private bool Uploading = false;
+
     public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
@@ -100,16 +103,20 @@ public class TelegramBot
             var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
 
             while (!resolveTask.IsCompleted)
-            {
-                await telegramBot.SendChatAction(chatId, ChatAction.Typing);
-                await Task.Delay(3000);
-            }
+                if (!Typing)
+                {
+                    Typing = true;
+                    await telegramBot.SendChatAction(chatId, ChatAction.Typing)
+                        .ContinueWith(res => Task.Delay(3000).ContinueWith(del => Typing = false));
+                }
+                else await Task.Delay(1000);
 
             if (!resolveTask.Result.Any())
             {
                 await telegramBot.SendMessage(chatId, "Nothing found!");
                 return;
             }
+
 
             foreach (var video in resolveTask.Result)
                 Task.Run(async () =>
@@ -119,10 +126,13 @@ public class TelegramBot
                         var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
                         while (!downloadTask.IsCompleted)
-                        {
-                            await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
-                            await Task.Delay(3000);
-                        }
+                            if (!Uploading)
+                            {
+                                Uploading = true;
+                                await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo)
+                                    .ContinueWith(res => Task.Delay(3000).ContinueWith(del => Uploading = false));
+                            }
+                            else await Task.Delay(1000);
 
                         var filePath = downloadTask.Result;
 
