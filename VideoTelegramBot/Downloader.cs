@@ -23,37 +23,26 @@ public class Downloader
             return Enumerable.Empty<IVideo>();
         }
     }
-    public async Task<string[]> DownloadVideosToOutputDirectory(IEnumerable<IVideo> videos, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
+    public async Task<string> DownloadVideoToOutputDirectory(IVideo video, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
     {
         var downloader = new VideoDownloader();
-        var downloadTasks = new List<Task<string>>();
 
-        foreach (var video in videos)
+        var download = new Download()
         {
-            var download = new Download()
-            {
-                VideoDownloadPreference = new VideoDownloadPreference(container, quality),
-                Video = video
-            };
+            VideoDownloadPreference = new VideoDownloadPreference(container, quality),
+            Video = video
+        };
 
-            download.VideoDownloadOption = await downloader.GetBestDownloadOptionAsync(
-                    download.Video!.Id,
-                    download.VideoDownloadPreference,
-                    false,
-                    cancellationToken
-                );
+        download.VideoDownloadOption = await downloader.GetBestDownloadOptionAsync(
+                download.Video!.Id,
+                download.VideoDownloadPreference,
+                false,
+                cancellationToken
+            );
 
-            download.FilePath = Path.Combine(destinationDirectory, Guid.NewGuid().ToString() + '.' + download.VideoDownloadOption.Container.Name);
-            File.Create(download.FilePath).Close();
+        download.FilePath = Path.Combine(destinationDirectory, Guid.NewGuid().ToString() + '.' + download.VideoDownloadOption.Container.Name);
+        File.Create(download.FilePath).Close();
 
-            downloadTasks.Add(DownloadVideo(downloader, download, cancellationToken));
-        }
-
-        return await Task.WhenAll(downloadTasks);
-    }
-
-    public static async Task<string> DownloadVideo(VideoDownloader downloader, Download download, CancellationToken cancellationToken)
-    {
         await downloader.DownloadVideoAsync(
                 download.FilePath!,
                 download.Video!,
@@ -74,6 +63,7 @@ public class Downloader
         {
             // Media tagging is not critical
         }
+
         return download.FilePath ?? string.Empty;
     }
 }

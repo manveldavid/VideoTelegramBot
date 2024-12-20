@@ -57,24 +57,29 @@ public class TelegramBot
                     if (update is null || update.Message is null)
                         continue;
 
-                    if (update.Message.Type == MessageType.Text &&
-                        !string.IsNullOrEmpty(update.Message.Text) &&
-                        update.Message.Text != "/start" &&
-                        Uri.TryCreate(update.Message.Text.Split(_argsSpliter).FirstOrDefault(), UriKind.Absolute, out var uri))
+                    if (update.Message.Type != MessageType.Text ||
+                        string.IsNullOrEmpty(update.Message.Text) ||
+                        update.Message.Text == "/start")
+                        continue;
+
+                    var args = update.Message.Text.Split(_argsSpliter);
+
+                    foreach (var arg in args)
+                        if (Uri.TryCreate(arg, UriKind.Absolute, out var uri))
                             DownloadVideoAndSendLink(
                                 telegramBot,
                                 update.Message.Chat.Id,
                                 update.Message.MessageId,
                                 uri,
                                 baseUrl,
-                                update.Message.Text.Split(_argsSpliter),
+                                args.Where(a => a != arg),
                                 cancellationToken);
                 }
             }
         }
     }
 
-    private async Task DownloadVideoAndSendLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, string[] args, CancellationToken cancellationToken)
+    private async Task DownloadVideoAndSendLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, IEnumerable<string> args, CancellationToken cancellationToken)
     {
         try
         {
@@ -84,6 +89,7 @@ public class TelegramBot
 
             var quality = VideoQualityPreference.UpTo720p;
             var container = Container.Mp4;
+
             foreach (var arg in args) {
                 foreach(var option in Qualities)
                     quality = option.ToString().ToLower().Contains(arg.ToLower()) ? option : quality;
@@ -105,21 +111,24 @@ public class TelegramBot
                 return;
             }
 
-            var downloadTask = downloader.DownloadVideosToOutputDirectory(resolveTask.Result, quality, container, outputPath, cancellationToken);
+            foreach (var video in resolveTask.Result)
+                Task.Run(async () =>
+                {
+                    var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
-            while (!downloadTask.IsCompleted)
-            {
-                await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
-                await Task.Delay(3000);
-            }
+                    while (!downloadTask.IsCompleted)
+                    {
+                        await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
+                        await Task.Delay(3000);
+                    }
 
-            var filePaths = downloadTask.Result;
+                    var filePath = downloadTask.Result;
 
-            foreach (var path in filePaths)
-                await telegramBot.SendMessage(
-                    chatId,
-                    Path.Combine(baseUrlPrefix, path.Replace(outputPath, ".")).Replace('\\', '/'),
-                    replyParameters: new Telegram.Bot.Types.ReplyParameters() { MessageId = messageId });
+                    await telegramBot.SendMessage(
+                        chatId,
+                        $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
+                        replyParameters: new ReplyParameters() { MessageId = messageId });
+                });
         }
         catch (Exception ex)
         {
