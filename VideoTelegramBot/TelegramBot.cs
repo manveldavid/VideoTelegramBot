@@ -9,6 +9,7 @@ namespace VideoTelegramBot;
 public class TelegramBot
 {
     private const char _argsSpliter = ' ';
+    private CancellationTokenSource CancellationTokenSource { get; set; } = new();
     private Container[] Containers { get; } = 
         [
             Container.Mp3,
@@ -57,6 +58,12 @@ public class TelegramBot
                     if (update is null || update.Message is null)
                         continue;
 
+                    if(update.Message.Text == "/stop")
+                    {
+                        CancellationTokenSource.Cancel();
+                        CancellationTokenSource = new CancellationTokenSource();
+                    }
+
                     if (update.Message.Type != MessageType.Text ||
                         string.IsNullOrEmpty(update.Message.Text) ||
                         update.Message.Text == "/start")
@@ -73,7 +80,7 @@ public class TelegramBot
                                 uri,
                                 baseUrl,
                                 args.Where(a => a != arg),
-                                cancellationToken);
+                                CancellationTokenSource.Token);
                 }
             }
         }
