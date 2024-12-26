@@ -137,7 +137,7 @@ public class TelegramBot
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    replyMessageText);
+                    $"Downloading {videos.Count} video ...");
 
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
