@@ -113,7 +113,7 @@ public class TelegramBot
                 if(arg.Contains('[') && arg.Contains(']'))
                 {
                     var range = arg.Replace("[", string.Empty).Replace("]", string.Empty).Split('-');
-                    startPlaylistIndex = range.FirstOrDefault() is not null ? int.TryParse(range.Last(), out var parsedStartIndex) ? parsedStartIndex : startPlaylistIndex : startPlaylistIndex;
+                    startPlaylistIndex = range.FirstOrDefault() is not null ? int.TryParse(range.First(), out var parsedStartIndex) ? parsedStartIndex : startPlaylistIndex : startPlaylistIndex;
                     endPlaylistIndex = range.LastOrDefault() is not null ? int.TryParse(range.Last(), out var parsedEndIndex) ? parsedEndIndex : endPlaylistIndex : endPlaylistIndex;
                 }
             }
@@ -137,24 +137,24 @@ public class TelegramBot
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count : (endPlaylistIndex - startPlaylistIndex + 1))} video ...");
+                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count.ToString() : $"[{startPlaylistIndex}-{endPlaylistIndex}]")} video ...");
             var index = startPlaylistIndex;
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
                 replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"{replyMessageText}\n\n{video.Title}\n\nDownloading...", ParseMode.Html);
+                    $"{replyMessageText}\n\n{video.Title}\nDownloading...");
 
                 try
                 {
                     var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
-                    replyMessageText = $"{replyMessageText}\n\n{(startPlaylistIndex == endPlaylistIndex || videos.Count == 1 ? string.Empty : $"[{index++}] ")}<a href='{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>{video.Title}</a>";
+                    replyMessageText = $"{replyMessageText}\n\n{(startPlaylistIndex == endPlaylistIndex || videos.Count == 1 ? string.Empty : $"[{index++}] ")}{video.Title}\n{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}";
                     replyMessage = await telegramBot.EditMessageText(
                         chatId,
                         replyMessage.Id,
-                        replyMessageText, ParseMode.Html);
+                        replyMessageText);
                 }
                 catch (Exception ex) 
                 {
