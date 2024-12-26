@@ -9,6 +9,16 @@
     <DockerfileContext>.</DockerfileContext>
 	  <NoWarn>CS4014</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="certificate.pfx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="certificate.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 	
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
