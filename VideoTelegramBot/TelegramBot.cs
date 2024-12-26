@@ -137,14 +137,14 @@ public class TelegramBot
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"Downloading {videos.Count} video ...");
+                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count : endPlaylistIndex - startPlaylistIndex + 1)} video ...");
 
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
                 replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"{replyMessageText}\n\nDownloading...\n{video.Title}");
+                    $"{replyMessageText}\n\n{video.Title}\nDownloading...");
 
                 var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
