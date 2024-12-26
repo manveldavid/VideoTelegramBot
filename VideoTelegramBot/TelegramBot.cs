@@ -137,22 +137,34 @@ public class TelegramBot
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count : endPlaylistIndex - startPlaylistIndex + 1)} video ...");
-
+                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count : (endPlaylistIndex - startPlaylistIndex + 1))} video ...");
+            var index = startPlaylistIndex;
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
                 replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"{replyMessageText}\n\n{video.Title}\nDownloading...");
+                    $"{replyMessageText}\n\n{video.Title}\n\nDownloading...", ParseMode.Html);
 
-                var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+                try
+                {
+                    var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
-                replyMessageText = $"{replyMessageText}\n\n{video.Title}\n{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}";
-                replyMessage = await telegramBot.EditMessageText(
+                    replyMessageText = $"{replyMessageText}\n\n{(startPlaylistIndex == endPlaylistIndex || videos.Count == 1 ? string.Empty : $"[{index++}] ")}<a href='{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>{video.Title}</a>";
+                    replyMessage = await telegramBot.EditMessageText(
+                        chatId,
+                        replyMessage.Id,
+                        replyMessageText, ParseMode.Html);
+                }
+                catch (Exception ex) 
+                {
+                    replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    replyMessageText);
+                    $"{replyMessageText}\n\n{video.Title}\n\nStopped", ParseMode.Html);
+
+                    throw ex;
+                }
             }
         }
         catch (AggregateException) { }
