@@ -8,6 +8,7 @@ namespace VideoTelegramBot
             var videoCollectorInpectPeriodInSeconds = TimeSpan.FromSeconds(double.TryParse(Environment.GetEnvironmentVariable("CHECK_VIDEO_LIFETIME_PERIOD_IN_SECONDS"), out var _videoCollectorInpectPeriodInSeconds) ? _videoCollectorInpectPeriodInSeconds : 3600d);
             var tgBotPollPeriodInSeconds = TimeSpan.FromSeconds(double.TryParse(Environment.GetEnvironmentVariable("TG_BOT_POLL_PERIOD_SECONDS"), out var _tgBotPollPeriodInSeconds) ? _tgBotPollPeriodInSeconds : 5d);
             var baseUrl = Environment.GetEnvironmentVariable("PUBLIC_URL")!;
+            var baseSecureUrl = Environment.GetEnvironmentVariable("PUBLIC_URL_SECURE")!;
             var apiKey = Environment.GetEnvironmentVariable("API_KEY")!;
 
             var tasks = new Task[] {
@@ -19,6 +20,7 @@ namespace VideoTelegramBot
 
                 new TelegramBot().RunAsync(
                     baseUrl,
+                    baseSecureUrl,
                     apiKey,
                     tgBotPollPeriodInSeconds, 
                     CancellationToken.None

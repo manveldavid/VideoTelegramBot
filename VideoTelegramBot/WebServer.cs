@@ -9,8 +9,6 @@ public class WebServer
         var builder = WebApplication.CreateBuilder(args);
         var app = builder.Build();
 
-        app.UseHttpsRedirection();
-
         app.MapGet("/{video}", async (string video) =>
         {
             var videoPath = Path.Combine(AppContext.BaseDirectory, "wwwroot", video);

@@ -29,9 +29,11 @@ public class TelegramBot
             VideoQualityPreference.UpTo1080p
         ];
 
-    public async Task RunAsync(string baseUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
+    public async Task RunAsync(string baseUrl, string baseSecureUrl, string apiKey, TimeSpan pollPeriod, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(baseUrl) || string.IsNullOrEmpty(apiKey))
+        if (string.IsNullOrEmpty(baseUrl) || 
+            string.IsNullOrEmpty(baseSecureUrl) || 
+            string.IsNullOrEmpty(apiKey))
             return;
 
         var offset = 0;
@@ -84,6 +86,7 @@ public class TelegramBot
                                 update.Message.MessageId,
                                 uri,
                                 baseUrl,
+                                baseSecureUrl,
                                 args.Where(a => a != arg),
                                 DownloadingCancellationTokenSource.Token);
                 }
@@ -91,7 +94,7 @@ public class TelegramBot
         }
     }
 
-    private async Task DownloadVideoAndSendLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, IEnumerable<string> args, CancellationToken cancellationToken)
+    private async Task DownloadVideoAndSendLink(TelegramBotClient telegramBot, long chatId, int messageId, Uri videoUrl, string baseUrlPrefix, string baseSecureUrlPrefix, IEnumerable<string> args, CancellationToken cancellationToken)
     {
         try
         {
@@ -131,30 +134,36 @@ public class TelegramBot
                 return;
             }
 
-            Console.WriteLine($"downloading {videoUrl} ({container},{quality}){(videos.Count() > 1 ? $" [{startPlaylistIndex}-{endPlaylistIndex}]" : string.Empty)}");
+            var videoCount = (startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count : endPlaylistIndex - startPlaylistIndex + 1);
 
-            var replyMessageText = string.Empty;
+            Console.WriteLine($"downloading {videoUrl} ({container},{quality}) {videoCount} video");
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"Downloading {(startPlaylistIndex == 0 && endPlaylistIndex == int.MaxValue ? videos.Count.ToString() : $"[{startPlaylistIndex}-{endPlaylistIndex}]")} video ...");
+                    $"Downloading {videoCount} video ...");
+
+            var replyMessageText = string.Empty;
             var index = startPlaylistIndex;
+
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
+                var videoIndex = (startPlaylistIndex == endPlaylistIndex || videos.Count == 1 ? string.Empty : $"[{index++}] ");
                 replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"{replyMessageText}\n\n{video.Title}\nDownloading...");
+                    $"{replyMessageText}\n\n{videoIndex}{video.Title}\nDownloading...",
+                    ParseMode.Html);
 
                 try
                 {
                     var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
-                    replyMessageText = $"{replyMessageText}\n\n{(startPlaylistIndex == endPlaylistIndex || videos.Count == 1 ? string.Empty : $"[{index++}] ")}{video.Title}\n{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}";
+                    replyMessageText = $"{replyMessageText}\n\n{videoIndex}{video.Title}\n<a href='{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>http</a> or <a href='{Path.Combine(baseSecureUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>https</a>";
                     replyMessage = await telegramBot.EditMessageText(
                         chatId,
                         replyMessage.Id,
-                        replyMessageText);
+                        replyMessageText, 
+                        ParseMode.Html);
                 }
                 catch (Exception ex) 
                 {
