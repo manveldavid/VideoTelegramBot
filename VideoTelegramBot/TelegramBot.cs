@@ -118,41 +118,41 @@ public class TelegramBot
                 }
             }
 
-            var resolveTask = downloader.ResolveUrl(videoUrl, cancellationToken);
+            var replyMessage = await telegramBot.SendMessage(
+                    chatId,
+                    $"Resolving url ...",
+                    replyParameters: new ReplyParameters() { MessageId = messageId });
 
-            while (!resolveTask.IsCompleted)
-            {
-                await telegramBot.SendChatAction(chatId, ChatAction.Typing);
-                await Task.Delay(3000);
-            }
+            var videos = (await downloader.ResolveUrl(videoUrl, cancellationToken)).ToList();
 
-            if (!resolveTask.Result.Any())
+            if (!videos.Any())
             {
-                await telegramBot.SendMessage(chatId, "Nothing found!");
-                Console.WriteLine($"nothing found {videoUrl}");
+                await telegramBot.EditMessageText(chatId, replyMessage.Id, "Nothing found :(");
                 return;
             }
 
-            var videos = resolveTask.Result.ToList();
+            Console.WriteLine($"downloading {videoUrl} ({container},{quality}){(videos.Count() > 1 ? $" [{startPlaylistIndex}-{endPlaylistIndex}]" : string.Empty)}");
 
-            Console.WriteLine($"start downloading {videoUrl} ({container},{quality}){(resolveTask.Result.Count() > 1 ? $" [{startPlaylistIndex}-{endPlaylistIndex}]" : string.Empty)}");
+            var replyMessageText = string.Empty;
+            replyMessage = await telegramBot.EditMessageText(
+                    chatId,
+                    replyMessage.Id,
+                    replyMessageText);
 
             foreach (var video in videos.Where(v => videos.IndexOf(v) >= startPlaylistIndex && videos.IndexOf(v) <= endPlaylistIndex))
             {
-                var downloadTask = downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
-
-                while (!downloadTask.IsCompleted)
-                {
-                    await telegramBot.SendChatAction(chatId, ChatAction.UploadVideo);
-                    await Task.Delay(3000);
-                }
-
-                var filePath = downloadTask.Result;
-
-                await telegramBot.SendMessage(
+                replyMessage = await telegramBot.EditMessageText(
                     chatId,
-                    $"{video.Title}\n {Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}",
-                    replyParameters: new ReplyParameters() { MessageId = messageId });
+                    replyMessage.Id,
+                    $"{replyMessageText}\n\nDownloading...\n{video.Title}");
+
+                var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+
+                replyMessageText = $"{replyMessageText}\n\n{video.Title}\n{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}";
+                replyMessage = await telegramBot.EditMessageText(
+                    chatId,
+                    replyMessage.Id,
+                    replyMessageText);
             }
         }
         catch (AggregateException) { }
