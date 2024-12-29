@@ -11,7 +11,9 @@ namespace VideoTelegramBot
             var baseSecureUrl = Environment.GetEnvironmentVariable("PUBLIC_URL_SECURE")!;
             var apiKey = Environment.GetEnvironmentVariable("API_KEY")!;
 
-            var tasks = new Task[] {
+            Console.WriteLine("bot run!");
+
+            await Task.WhenAll([
                 new WebServer().RunAsync(
                     args,
                     videoLifeTimeInSeconds,
@@ -22,20 +24,16 @@ namespace VideoTelegramBot
                     baseUrl,
                     baseSecureUrl,
                     apiKey,
-                    tgBotPollPeriodInSeconds, 
+                    tgBotPollPeriodInSeconds,
                     CancellationToken.None
                     ),
 
                 new FileCollector().RunAsync(
                     videoLifeTimeInSeconds,
-                    videoCollectorInpectPeriodInSeconds, 
+                    videoCollectorInpectPeriodInSeconds,
                     CancellationToken.None
-                    ),
-            };
-
-            Console.WriteLine("bot run!");
-
-            await Task.WhenAll(tasks);
+                    )
+                ]);
         }
     }
 }
