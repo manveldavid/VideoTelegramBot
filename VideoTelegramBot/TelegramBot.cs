@@ -132,6 +132,20 @@ public class TelegramBot
                 }
             }
 
+            if (videoUrl.ToString().StartsWith("https://youtu.be/") ||
+                videoUrl.ToString().StartsWith("https://youtube.com/shorts/"))
+            {
+                var url = videoUrl.ToString();
+
+                if (url.Contains("?si="))
+                    url = url.Substring(0, url.IndexOf("?si="));
+
+                videoUrl = new Uri(url
+                    .Replace("https://youtu.be/", "https://www.youtube.com/watch?v=")
+                    .Replace("https://youtube.com/shorts/", "https://www.youtube.com/watch?v=")
+                    );
+            }
+
             var replyMessage = await telegramBot.SendMessage(
                     chatId,
                     $"Resolving url ...",
@@ -179,12 +193,19 @@ public class TelegramBot
                         ParseMode.Html);
                     Interlocked.Increment(ref totoalVideoCount);
                 }
-                catch (Exception ex) 
+                catch (TaskCanceledException ex) 
                 {
                     replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
                     $"{replyMessageText}\n\n{video.Title}\n\nStopped", ParseMode.Html);
+                }
+                catch (Exception ex) 
+                {
+                    replyMessage = await telegramBot.EditMessageText(
+                    chatId,
+                    replyMessage.Id,
+                    $"{replyMessageText}\n\n{video.Title}\n\nError occured:\n {ex.Message} {ex.InnerException?.Message}", ParseMode.Html);
 
                     throw ex;
                 }

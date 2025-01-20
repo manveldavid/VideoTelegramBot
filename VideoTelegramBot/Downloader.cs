@@ -3,6 +3,7 @@ using YoutubeDownloader.Core.Resolving;
 using YoutubeExplode.Videos.Streams;
 using YoutubeDownloader.Core.Tagging;
 using YoutubeExplode.Videos;
+using System.Net;
 
 namespace VideoTelegramBot;
 
@@ -25,7 +26,13 @@ public class Downloader
     }
     public async Task<string> DownloadVideoToOutputDirectory(IVideo video, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
     {
-        var downloader = new VideoDownloader();
+        CookieContainer cookieContainer = new CookieContainer();
+        HttpClientHandler handler = new HttpClientHandler() { CookieContainer = cookieContainer };
+
+        using (var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromHours(1)})
+            httpClient.GetAsync("https://www.youtube.com/", cancellationToken);
+
+        var downloader = new VideoDownloader(cookieContainer.GetAllCookies().ToList().AsReadOnly());
 
         var download = new Download()
         {
