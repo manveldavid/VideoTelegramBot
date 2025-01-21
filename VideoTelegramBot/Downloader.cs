@@ -26,13 +26,7 @@ public class Downloader
     }
     public async Task<string> DownloadVideoToOutputDirectory(IVideo video, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
     {
-        CookieContainer cookieContainer = new CookieContainer();
-        HttpClientHandler handler = new HttpClientHandler() { CookieContainer = cookieContainer };
-
-        using (var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromHours(1)})
-            httpClient.GetAsync("https://www.youtube.com/", cancellationToken);
-
-        var downloader = new VideoDownloader(cookieContainer.GetAllCookies().ToList().AsReadOnly());
+        var downloader = new VideoDownloader();
 
         var download = new Download()
         {
