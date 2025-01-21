@@ -47,7 +47,7 @@ public class Downloader
                 cancellationToken
             );
 
-        download.FilePath = Path.Combine(destinationDirectory, Guid.NewGuid().ToString() + '.' + download.VideoDownloadOption.Container.Name);
+        download.FilePath = Path.Combine(destinationDirectory, video.Id.Value + '.' + download.VideoDownloadOption.Container.Name);
         File.Create(download.FilePath).Close();
 
         await downloader.DownloadVideoAsync(

@@ -132,20 +132,6 @@ public class TelegramBot
                 }
             }
 
-            if (videoUrl.ToString().StartsWith("https://youtu.be/") ||
-                videoUrl.ToString().StartsWith("https://youtube.com/shorts/"))
-            {
-                var url = videoUrl.ToString();
-
-                if (url.Contains("?si="))
-                    url = url.Substring(0, url.IndexOf("?si="));
-
-                videoUrl = new Uri(url
-                    .Replace("https://youtu.be/", "https://www.youtube.com/watch?v=")
-                    .Replace("https://youtube.com/shorts/", "https://www.youtube.com/watch?v=")
-                    );
-            }
-
             var replyMessage = await telegramBot.SendMessage(
                     chatId,
                     $"Resolving url ...",
@@ -181,33 +167,40 @@ public class TelegramBot
                     $"{replyMessageText}\n\n{videoIndex}{video.Title}\nDownloading...",
                     ParseMode.Html);
 
-                try
+                var retriveTries = 0;
+                while (retriveTries != -1 && !cancellationToken.IsCancellationRequested)
                 {
-                    var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
+                    try
+                    {
+                        var filePath = await downloader.DownloadVideoToOutputDirectory(video, quality, container, outputPath, cancellationToken);
 
-                    replyMessageText = $"{replyMessageText}\n\n{videoIndex}{video.Title}\n<a href='{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>http</a> or <a href='{Path.Combine(baseSecureUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>https</a>";
-                    replyMessage = await telegramBot.EditMessageText(
+                        replyMessageText = $"{replyMessageText}\n\n{videoIndex}{video.Title}\n<a href='{Path.Combine(baseUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>http</a> or <a href='{Path.Combine(baseSecureUrlPrefix, filePath.Replace(outputPath, ".")).Replace('\\', '/')}'>https</a>";
+                        replyMessage = await telegramBot.EditMessageText(
+                            chatId,
+                            replyMessage.Id,
+                            replyMessageText, 
+                            ParseMode.Html);
+                        Interlocked.Increment(ref totoalVideoCount);
+                        retriveTries = -1;
+                    }
+                    catch (TaskCanceledException ex) 
+                    {
+                        replyMessage = await telegramBot.EditMessageText(
                         chatId,
                         replyMessage.Id,
-                        replyMessageText, 
-                        ParseMode.Html);
-                    Interlocked.Increment(ref totoalVideoCount);
-                }
-                catch (TaskCanceledException ex) 
-                {
-                    replyMessage = await telegramBot.EditMessageText(
-                    chatId,
-                    replyMessage.Id,
-                    $"{replyMessageText}\n\n{video.Title}\n\nStopped", ParseMode.Html);
-                }
-                catch (Exception ex) 
-                {
-                    replyMessage = await telegramBot.EditMessageText(
-                    chatId,
-                    replyMessage.Id,
-                    $"{replyMessageText}\n\n{video.Title}\n\nError occured:\n {ex.Message} {ex.InnerException?.Message}", ParseMode.Html);
+                        $"{replyMessageText}\n\n{video.Title}\n\nStopped", ParseMode.Html);
+                        retriveTries = -1;
+                    }
+                    catch (Exception ex) 
+                    {
+                        replyMessage = await telegramBot.EditMessageText(
+                        chatId,
+                        replyMessage.Id,
+                        $"{replyMessageText}\n\n{video.Title}\n\n({++retriveTries}) Retrying download...\nLast error: {ex.Message} {ex.InnerException?.Message}", ParseMode.Html);
 
-                    throw ex;
+                        if (!ex.Message.StartsWith($"Video '{video.Id}' is "))
+                            retriveTries = -1;
+                    }
                 }
             }
         }
