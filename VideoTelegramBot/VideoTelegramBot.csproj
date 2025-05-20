@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dd944035-11f3-4ece-8b69-faaf31e83129</UserSecretsId>
@@ -21,19 +21,40 @@
   </ItemGroup>
 	
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
-    <PackageReference Include="Telegram.Bot" Version="22.3.0" />
-	<PackageReference Include="Gress" Version="2.1.1" />
-	<PackageReference Include="Cogwheel" Version="2.1.0" />
-	<PackageReference Include="JsonExtensions" Version="1.2.0" />
-	<PackageReference Include="TagLibSharp" Version="2.3.0" />
-	<PackageReference Include="YoutubeExplode" Version="6.5.1" />
-	<PackageReference Include="YoutubeExplode.Converter" Version="6.5.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.2" />
+    <PackageReference Include="Telegram.Bot" Version="22.5.1" />
   </ItemGroup>
 	
   <ItemGroup>
+    <Reference Include="AngleSharp">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\AngleSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="CliWrap">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\CliWrap.dll</HintPath>
+    </Reference>
+    <Reference Include="Cogwheel">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\Cogwheel.dll</HintPath>
+    </Reference>
+    <Reference Include="Gress">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\Gress.dll</HintPath>
+    </Reference>
+    <Reference Include="JsonExtensions">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\JsonExtensions.dll</HintPath>
+    </Reference>
+    <Reference Include="Onova">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\Onova.dll</HintPath>
+    </Reference>
+    <Reference Include="TagLibSharp">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\TagLibSharp.dll</HintPath>
+    </Reference>
     <Reference Include="YoutubeDownloader.Core">
-      <HintPath>YoutubeDownloader.Core.dll</HintPath>
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\YoutubeDownloader.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="YoutubeExplode">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\YoutubeExplode.dll</HintPath>
+    </Reference>
+    <Reference Include="YoutubeExplode.Converter">
+      <HintPath>..\dependencies\YoutubeDownloader\YoutubeDownloader\bin\Release\net9.0\publish\YoutubeExplode.Converter.dll</HintPath>
     </Reference>
   </ItemGroup>
 	

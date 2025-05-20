@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace VideoTelegramBot;
+﻿namespace VideoTelegramBot;
 
 public class WebServer
 {

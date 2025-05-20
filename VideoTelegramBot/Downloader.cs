@@ -9,15 +9,14 @@ namespace VideoTelegramBot;
 
 public class Downloader
 {
+    public IReadOnlyList<Cookie>? InitialCookies { get; } = null;
+    public Downloader() { }
+    public Downloader(IReadOnlyList<Cookie>? cookies) { InitialCookies = cookies; }
     public async Task<IEnumerable<IVideo>> ResolveUrl(Uri url, CancellationToken cancellationToken)
     {
         try
         {
-            return (await new QueryResolver().ResolveAsync(
-                url.ToString().Split(
-                    "\n",
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
-                ), cancellationToken:cancellationToken)).Videos;
+            return (await new QueryResolver().ResolveAsync(url.ToString(), cancellationToken:cancellationToken)).Videos;
         }
         catch
         {
@@ -26,7 +25,7 @@ public class Downloader
     }
     public async Task<string> DownloadVideoToOutputDirectory(IVideo video, VideoQualityPreference quality, Container container, string destinationDirectory, CancellationToken cancellationToken)
     {
-        var downloader = new VideoDownloader();
+        var downloader = new VideoDownloader(InitialCookies);
 
         var download = new Download()
         {

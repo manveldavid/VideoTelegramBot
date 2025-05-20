@@ -1,4 +1,5 @@
-﻿using Telegram.Bot;
+﻿using System.Net;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using YoutubeDownloader.Core.Downloading;
@@ -111,6 +112,7 @@ public class TelegramBot
         {
             var outputDirectory = "wwwroot";
             var outputPath = Path.Combine(AppContext.BaseDirectory, outputDirectory);
+            
             var downloader = new Downloader();
 
             var quality = VideoQualityPreference.UpTo720p;
@@ -135,13 +137,36 @@ public class TelegramBot
             var replyMessage = await telegramBot.SendMessage(
                     chatId,
                     $"Resolving url ...",
-                    replyParameters: new ReplyParameters() { MessageId = messageId });
+                    replyParameters: new ReplyParameters() { MessageId = messageId },
+                    cancellationToken: cancellationToken);
+
+            var sessionIdMark = "?si=";
+            var youtubeCorrectUrl = "https://www.youtube.com/watch?v=";
+            var youtubeUrls =
+                new string[]
+                {
+                    "https://youtube.com/shorts/",
+                    "https://youtu.be/",
+                };
+
+            if (youtubeUrls.Any(d => videoUrl.ToString().StartsWith(d)))
+            {
+                var url = videoUrl.ToString();
+
+                if (url.Contains(sessionIdMark))
+                    url = url.Substring(0, url.IndexOf(sessionIdMark));
+
+                foreach (var domain in youtubeUrls)
+                    url = url.Replace(domain, youtubeCorrectUrl);
+
+                videoUrl = new Uri(url);
+            }
 
             var videos = (await downloader.ResolveUrl(videoUrl, cancellationToken)).ToList();
 
             if (!videos.Any())
             {
-                await telegramBot.EditMessageText(chatId, replyMessage.Id, "Nothing found :(");
+                await telegramBot.EditMessageText(chatId, replyMessage.Id, "Nothing found :(", cancellationToken: cancellationToken);
                 return;
             }
 
@@ -151,7 +176,8 @@ public class TelegramBot
             replyMessage = await telegramBot.EditMessageText(
                     chatId,
                     replyMessage.Id,
-                    $"Downloading {videoCount} video ...");
+                    $"Downloading {videoCount} video ...",
+                    cancellationToken: cancellationToken);
 
             var replyMessageText = string.Empty;
             var index = startPlaylistIndex;
@@ -165,7 +191,8 @@ public class TelegramBot
                     chatId,
                     replyMessage.Id,
                     $"{replyMessageText}\n\n{videoIndex}{video.Title}\nDownloading...",
-                    ParseMode.Html);
+                    ParseMode.Html,
+                    cancellationToken: cancellationToken);
 
                 var retriveTries = 0;
                 while (retriveTries != -1 && !cancellationToken.IsCancellationRequested)
@@ -179,27 +206,29 @@ public class TelegramBot
                             chatId,
                             replyMessage.Id,
                             replyMessageText, 
-                            ParseMode.Html);
+                            ParseMode.Html,
+                            cancellationToken: cancellationToken);
                         Interlocked.Increment(ref totoalVideoCount);
                         retriveTries = -1;
                     }
-                    catch (TaskCanceledException ex) 
+                    catch (TaskCanceledException) 
                     {
                         replyMessage = await telegramBot.EditMessageText(
-                        chatId,
-                        replyMessage.Id,
-                        $"{replyMessageText}\n\n{video.Title}\n\nStopped", ParseMode.Html);
+                            chatId,
+                            replyMessage.Id,
+                            $"{replyMessageText}\n\n{video.Title}\n\nStopped", 
+                            ParseMode.Html,
+                            cancellationToken: cancellationToken);
                         retriveTries = -1;
                     }
                     catch (Exception ex) 
                     {
                         replyMessage = await telegramBot.EditMessageText(
-                        chatId,
-                        replyMessage.Id,
-                        $"{replyMessageText}\n\n{video.Title}\n\n({++retriveTries}) Retrying download...\nLast error: {ex.Message} {ex.InnerException?.Message}", ParseMode.Html);
-
-                        if (!ex.Message.StartsWith($"Video '{video.Id}' is "))
-                            retriveTries = -1;
+                            chatId,
+                            replyMessage.Id,
+                            $"{replyMessageText}\n\n{video.Title}\n\n({++retriveTries}) Retrying download...\nLast error: {ex.Message} {ex.InnerException?.Message}", 
+                            ParseMode.Html, 
+                            cancellationToken: cancellationToken);
                     }
                 }
             }
